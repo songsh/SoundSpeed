@@ -8,8 +8,26 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.ShortBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+
+import nobleworks.libmpg.MP3Decoder;
 
 public class MainActivity extends AppCompatActivity {
+
+    private Button btnConveter;
+    private String mp3file;
+    private ShortBuffer samples = ShortBuffer.allocate(1024);
+    private int num;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,8 +44,48 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
+        initView();
 
         
+    }
+
+    private void initView() {
+
+        btnConveter = (Button) findViewById(R.id.btn_conveter);
+        btnConveter.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MP3Decoder decoder = new MP3Decoder("/sdcard/old.mp3");
+                FileOutputStream outputStream= null;
+                FileChannel fileChannel = null;
+                try {
+                    File newFile = new File("/sdcard/ori.pcm");
+                    if(!newFile.exists()){
+                        newFile.createNewFile();
+                    }
+                    outputStream = new FileOutputStream(newFile);
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+                    fileChannel =outputStream.getChannel();
+                    while((num = decoder.readSamples(byteBuffer.asShortBuffer()))>0){
+                        decoder.skipSamples(num);
+                        byteBuffer.flip();
+                        while(byteBuffer.hasRemaining()){
+                            fileChannel.write(byteBuffer);
+                        }
+                    };
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }finally {
+                    try {
+                        fileChannel.close();
+                        outputStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
     }
 
     @Override
